@@ -20,4 +20,7 @@ A high-conversion Telegram bot designed to replace static contact forms and qual
 Perfect for real estate agents, online coaches, and service-based businesses. This bot automates the "first touch" and ensures no lead is lost.
 
 ---
-**Looking for a custom version?** [Contact me](muzonychmuzon@gmail.com)
+**Looking for a custom version?** 
+Contact me: 
+Email: muzonychmuzon@gmail.com
+Telegram: t.me/klyyyym
