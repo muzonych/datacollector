@@ -23,4 +23,4 @@ Perfect for real estate agents, online coaches, and service-based businesses. Th
 **Looking for a custom version?** 
 Contact me: 
 Email: muzonychmuzon@gmail.com
-Telegram: t.me/klyyyym
+Telegram: @klyyyym
