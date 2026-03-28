@@ -1,75 +1,75 @@
 import asyncio
+import os
+from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.filters import Command, StateFilter
+from aiogram.fsm.storage.memory import MemoryStorage
 
-import os
-from dotenv import load_dotenv
+# 1. Загрузка настроек
 load_dotenv()
-
-import os
-from aiogram import Bot, Dispatcher, types
-from aiogram.client.session.aiohttp import AiohttpSession # Добавь этот импорт!
-
-# Настройка прокси для PythonAnywhere
-proxy_url = "http://proxy.server:3128"
-session = AiohttpSession(proxy=proxy_url)
-
-# Инициализация бота с сессией через прокси
 API_TOKEN = os.getenv("BOT_TOKEN")
-bot = Bot(token=API_TOKEN, session=session)
-
-# --- CONFIG ---
-API_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID") # Чтобы бот присылал тебе контакты лидов
+ADMIN_ID = os.getenv("ADMIN_ID")
 
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
+dp = Dispatcher(storage=MemoryStorage())
 
-# Состояния опроса (FSM)
+# 2. Состояния опроса
 class Survey(StatesGroup):
     name = State()
-    goal = State()
+    date = State()   # Состояние для даты
     contact = State()
 
-# 1. СТАРТ
-@dp.message(Command("start"))
-async def start_cmd(message: types.Message):
-    await message.answer("👋 Hi! I'm your AI assistant. Want to get a 2026 Market Report? Let's start with your name!")
+# --- ХЕНДЛЕРЫ ---
 
-# 2. ИМЯ -> ЦЕЛЬ (Ждем имя в состоянии None)
-@dp.message(StateFilter(None), F.text)
+@dp.message(Command("start"))
+async def start_cmd(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("👋 Hello! You've reached N&D Barbershop. What's your name?")
+    await state.set_state(Survey.name)
+
+@dp.message(Survey.name, F.text)
 async def process_name(message: types.Message, state: FSMContext):
     await state.update_data(name=message.text)
-    await state.set_state(Survey.goal)
-    await message.answer(f"Nice to meet you, {message.text}! What is your main goal for 2026? (e.g., Passive Income, New Career)")
+    await state.set_state(Survey.date)
+    await message.answer(f"Nice to meet you, {message.text}! When would you like to visit us? (e.g., Tomorrow at 2 PM)")
 
-# 3. ЦЕЛЬ -> КОНТАКТ (Ждем цель в состоянии Survey.goal)
-@dp.message(Survey.goal)
-async def process_goal(message: types.Message, state: FSMContext):
-    await state.update_data(goal=message.text)
+@dp.message(Survey.date, F.text)
+async def process_date(message: types.Message, state: FSMContext):
+    # СОХРАНЯЕМ ДАННЫЕ ИМЕННО КАК 'date'
+    await state.update_data(date=message.text) 
     await state.set_state(Survey.contact)
-    await message.answer("Got it! Please share your Email or Phone so I can send you the PDF.")
+    await message.answer("Got it! Please share your phone number so our administrator can confirm your appointment.")
 
-# 4. ФИНАЛ (Ждем контакт в состоянии Survey.contact)
-@dp.message(Survey.contact)
+@dp.message(Survey.contact, F.text)
 async def process_contact(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
-    # Теперь данные точно сохранятся
-    name = user_data.get('name', 'User')
-    goal = user_data.get('goal', 'Unknown')
+    
+    # Извлекаем данные по правильным ключам
+    name = user_data.get('name')
+    date = user_data.get('date') 
     contact = message.text
     
-    await message.answer("Perfect! Your report is being generated and will be sent shortly. Have a great day!")
+    await message.answer("Perfect! Your request has been sent to our administrator. We will contact you shortly to confirm.")
     
-    # Уведомление тебе
-    report = f"🚀 NEW LEAD!\nName: {name}\nGoal: {goal}\nContact: {contact}"
-    await bot.send_message(ADMIN_ID, report)
+    # Формируем отчет для админа
+    report = (
+        f"📅 **NEW APPOINTMENT**\n\n"
+        f"👤 **Client:** {name}\n"
+        f"⏰ **Desired Date:** {date}\n"
+        f"📞 **Contact:** {contact}"
+    )
+    
+    try:
+        await bot.send_message(ADMIN_ID, report, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Error sending to admin: {e}")
+    
     await state.clear()
 
 async def main():
+    print("Barbershop Bot is running...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
