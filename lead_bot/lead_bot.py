@@ -7,7 +7,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
-# 1. Загрузка настроек
 load_dotenv()
 API_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = os.getenv("ADMIN_ID")
@@ -15,13 +14,10 @@ ADMIN_ID = os.getenv("ADMIN_ID")
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# 2. Состояния опроса
 class Survey(StatesGroup):
     name = State()
     date = State()   # Состояние для даты
     contact = State()
-
-# --- ХЕНДЛЕРЫ ---
 
 @dp.message(Command("start"))
 async def start_cmd(message: types.Message, state: FSMContext):
@@ -37,7 +33,6 @@ async def process_name(message: types.Message, state: FSMContext):
 
 @dp.message(Survey.date, F.text)
 async def process_date(message: types.Message, state: FSMContext):
-    # СОХРАНЯЕМ ДАННЫЕ ИМЕННО КАК 'date'
     await state.update_data(date=message.text) 
     await state.set_state(Survey.contact)
     await message.answer("Got it! Please share your phone number so our administrator can confirm your appointment.")
@@ -46,14 +41,12 @@ async def process_date(message: types.Message, state: FSMContext):
 async def process_contact(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
     
-    # Извлекаем данные по правильным ключам
     name = user_data.get('name')
     date = user_data.get('date') 
     contact = message.text
     
     await message.answer("Perfect! Your request has been sent to our administrator. We will contact you shortly to confirm.")
     
-    # Формируем отчет для админа
     report = (
         f"📅 **NEW APPOINTMENT**\n\n"
         f"👤 **Client:** {name}\n"
